@@ -23,5 +23,5 @@ env/
 .DS_Store
 Thumbs.db
 
-# 출력 이미지 (필요시 커밋)
-# output/*.jpg
+# 출력 이미지 폴더
+output/

@@ -34,6 +34,7 @@ class RoadviewClient:
 
         self.api_key = api_key
         self.template_path = Path(__file__).parent / 'roadview_template.html'
+        self.template_multidir_path = Path(__file__).parent / 'roadview_template_multidir.html'
 
         if not self.template_path.exists():
             raise FileNotFoundError(f"HTML 템플릿을 찾을 수 없습니다: {self.template_path}")
@@ -238,6 +239,101 @@ class RoadviewClient:
 
                 finally:
                     browser.close()
+
+        finally:
+            self._stop_server()
+
+    def capture_roadview_multidir(
+        self,
+        sample_lat: float,
+        sample_lng: float,
+        target_lat: float,
+        target_lng: float,
+        output_path: str,
+        width: int = 1200,
+        height: int = 800,
+        headless: bool = True,
+        timeout: int = 15000,
+        search_radius: int = 50
+    ) -> bool:
+        """
+        다방향 샘플링용 로드뷰 캡처
+
+        샘플 좌표 주변에서 로드뷰를 찾아, 타겟 좌표를 향하도록 캡처
+
+        Args:
+            sample_lat: 샘플 위도 (로드뷰 찾을 위치)
+            sample_lng: 샘플 경도 (로드뷰 찾을 위치)
+            target_lat: 타겟 위도 (카메라가 볼 방향)
+            target_lng: 타겟 경도 (카메라가 볼 방향)
+            output_path: 저장 경로
+            width: 이미지 너비
+            height: 이미지 높이
+            headless: 헤드리스 모드 여부
+            timeout: 타임아웃 (밀리초)
+
+        Returns:
+            성공 여부
+        """
+        if not self.template_multidir_path.exists():
+            raise FileNotFoundError(f"다방향 템플릿을 찾을 수 없습니다: {self.template_multidir_path}")
+
+        print(f"[INFO] 다방향 로드뷰 캡처: sample=({sample_lat}, {sample_lng}), target=({target_lat}, {target_lng})")
+
+        # HTML 생성 (4개 좌표 사용)
+        with open(self.template_multidir_path, 'r', encoding='utf-8') as f:
+            template = f.read()
+
+        html = template.replace('{{KAKAO_API_KEY}}', self.api_key)
+        html = html.replace('{{SAMPLE_LAT}}', str(sample_lat))
+        html = html.replace('{{SAMPLE_LNG}}', str(sample_lng))
+        html = html.replace('{{TARGET_LAT}}', str(target_lat))
+        html = html.replace('{{TARGET_LNG}}', str(target_lng))
+        html = html.replace('{{SEARCH_RADIUS}}', str(search_radius))
+
+        # HTTP 서버 시작
+        self._start_server(html)
+
+        try:
+            with sync_playwright() as p:
+                # 브라우저 실행
+                browser = p.chromium.launch(headless=headless)
+                context = browser.new_context(viewport={'width': width, 'height': height})
+                page = context.new_page()
+
+                # HTTP 서버로 접속
+                url = f'http://localhost:{self.port}/'
+                page.goto(url)
+
+                # 로드뷰가 로드될 때까지 대기
+                try:
+                    page.wait_for_selector('body.roadview-loaded, body.roadview-error', timeout=timeout)
+
+                    # 에러 체크
+                    if 'roadview-error' in page.locator('body').get_attribute('class'):
+                        print(f"[WARN] 로드뷰 없음: sample=({sample_lat}, {sample_lng})")
+                        browser.close()
+                        return False
+
+                    # 이미지 완전 로딩을 위한 추가 대기 (1초)
+                    page.wait_for_timeout(1000)
+
+                    # 스크린샷 촬영
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    page.screenshot(path=output_path, full_page=False)
+
+                    print(f"[INFO] 캡처 완료: {output_path}")
+                    browser.close()
+                    return True
+
+                except PlaywrightTimeoutError:
+                    print(f"[ERROR] 타임아웃: {output_path}")
+                    browser.close()
+                    return False
+
+        except Exception as e:
+            print(f"[ERROR] 캡처 실패: {e}")
+            return False
 
         finally:
             self._stop_server()
