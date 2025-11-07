@@ -1,270 +1,294 @@
-# Kakao Roadview Capture - Adaptive Multi-Direction Park Sampling
+# Proper Park Inha - 도시공원 품질 평가 연구
 
-카카오맵 로드뷰를 Python + Playwright로 캡처하는 프로젝트 (적응형 다방향 샘플링)
+**인천광역시 미추홀구 도시공원의 VLM 기반 품질 평가 및 GIS 접근성 분석**
 
-## 특징
+## 📋 연구 개요
 
-- ✅ 카카오맵 로드뷰 정식 사용
-- ✅ 위경도 좌표 하드코딩 가능
-- ✅ 한국 지역 커버리지 우수
-- ✅ Playwright 브라우저 자동화
-- ⭐ **공원 다방향 샘플링** (4방향, 8방향, 12방향, 적응형)
-- ⭐ **자동 방향 조정** (카메라가 공원 중심을 향하도록)
-- 🔥 **면적 기반 반경 계산** (공원 크기에 맞는 최적 거리)
-- 🔥 **적응형 범위 확대** (성공률 낮으면 반경 자동 증가)
-- 🔥 **로딩 최적화** (뿌연 이미지 방지)
+### 연구 목적
+인천광역시 미추홀구의 도시공원 품질을 객관적으로 평가하고, 공원 접근성 사각지대를 도출하여 도시계획 개선방안을 제시합니다.
 
-## 설치
+### 연구 배경
+- 도시공원은 도시민의 삶의 질에 직접적인 영향을 미치는 중요한 도시기반시설
+- 기존 공원 평가는 주관적 설문조사나 단순 통계에 의존
+- **VLM(Vision Language Model)** 기술을 활용한 객관적이고 정량적인 평가 필요
+- 실제 공원 이용자 관점에서의 환경 품질 평가 부재
+
+### 연구 대상
+- **지역**: 인천광역시 미추홀구
+- **대상**: 도시공원 64개
+- **이미지**: 공원당 8방향 로드뷰 이미지 (약 500장)
+
+---
+
+## 🔬 연구 파이프라인
+
+### 1️⃣ 데이터 수집 (완료 ✅)
+```
+📊 DATA.GO.KR 공공데이터
+├─ 미추홀구 도시공원정보 (64개)
+├─ 공원별 로드뷰 이미지 (8방향 × 64개)
+└─ 행정동 경계 및 인구 데이터 (21개)
+```
+
+**구현 기술**:
+- 카카오맵 API 로드뷰
+- Playwright 브라우저 자동화
+- 적응형 다방향 샘플링 (4/8/12방향)
+- 공원 면적 기반 반경 자동 계산
+- 성공률 기반 범위 자동 확대
+
+---
+
+### 2️⃣ VLM 기반 공원 환경 평가 (완료 ✅)
+```
+🤖 Gemini 0-10점 척도 평가
+├─ 공원 가시성 (Visibility)
+├─ 접근성 (Accessibility)
+├─ 시각적 쾌적성 (Visual Amenity)
+└─ 녹지 비율 (Green Coverage)
+```
+
+**구현 기술**:
+- Google Gemini 2.5 Flash (2025 최신 모델)
+- 새로운 google-genai SDK 사용
+- Vision-Language Model 기반 이미지 분석
+- 구조화된 JSON 출력 (response_mime_type)
+- 방향별 평가 결과 자동 저장
+- 4개 항목 종합 점수 자동 계산
+
+---
+
+### 3️⃣ GIS 기반 접근성 분석 (예정 ⏳)
+```
+🗺️ QGIS 공간 분석
+├─ 서비스 권역 분석 → 사각지대 도출
+├─ 행정동별 1인당 녹지 면적 산출
+└─ 지구단위계획 예정지 중첩 분석
+```
+
+---
+
+## 📂 프로젝트 구조
+
+```
+proper_park-inha/
+├── data/                           # 연구 데이터
+│   └── 인천광역시_미추홀구_도시공원정보_20250105.csv
+│
+├── src/                            # 코어 모듈
+│   ├── __init__.py
+│   ├── roadview_client.py         # 카카오 로드뷰 클라이언트
+│   ├── park_sampler.py            # 공원 다방향 샘플링
+│   ├── adaptive_capture.py        # 적응형 캡처 관리자
+│   ├── gemini_evaluator.py        # Gemini VLM 평가 클라이언트
+│   └── templates/                 # HTML 템플릿
+│       ├── roadview_template.html
+│       └── roadview_template_multidir.html
+│
+├── docs/                           # 연구 문서
+│   └── prompts/                   # LLM 프롬프트
+│       └── park_evaluation_prompt.md
+│
+├── output/                         # 결과물
+│   └── [공원명]/                  # 공원별 결과
+│       ├── 북.jpg                 # 로드뷰 이미지
+│       ├── 북동.jpg
+│       ├── ...
+│       └── evaluation.json        # VLM 평가 결과
+│
+├── .claude/                        # 프로젝트 설정
+│   └── CLAUDE.md
+│
+├── main.py                         # 테스트용 캡처 (2개 공원)
+├── batch_capture_all_parks.py     # 전체 공원 일괄 캡처
+├── evaluate_parks.py              # VLM 기반 공원 평가
+├── .env                            # 환경 변수 (API 키)
+├── .env.example                    # 환경 변수 예시
+├── requirements.txt                # Python 의존성
+└── README.md                       # 프로젝트 문서
+```
+
+---
+
+## 🚀 설치 및 실행
 
 ### 1. 의존성 설치
 
 ```bash
 pip install -r requirements.txt
-```
-
-### 2. Playwright 브라우저 설치
-
-```bash
 playwright install chromium
 ```
 
-### 3. 카카오 API 키 발급
+### 2. API 키 설정
 
+#### 카카오 API 키
 1. [Kakao Developers](https://developers.kakao.com/) 접속
-2. **애플리케이션 추가하기**
-3. **플랫폼 설정** → **Web 플랫폼 추가** → 사이트 도메인 등록 (로컬 테스트: `http://localhost`)
-4. **앱 키** → **JavaScript 키** 복사
+2. **애플리케이션 추가** → **JavaScript 키** 발급
+3. `.env` 파일에 API 키 입력
 
-### 4. .env 파일 설정
+#### Gemini API 키
+1. [Google AI Studio](https://aistudio.google.com/app/apikey) 접속
+2. **Create API Key** 클릭하여 키 발급
+3. `.env` 파일에 API 키 입력
 
-`.env` 파일을 열고 발급받은 JavaScript 키 입력:
-
-```
+#### .env 파일 설정
+```env
+# Kakao Maps API
 KAKAO_API_KEY=발급받은_JavaScript_키
+
+# Google Gemini API (2025 최신)
+GEMINI_API_KEY=발급받은_Gemini_API_키
+GEMINI_MODEL=gemini-2.5-flash  # 빠르고 저렴 (권장)
 ```
 
-## 사용법
+### 3. 로드뷰 이미지 수집
 
-### VSCode에서 실행 (권장)
-
-1. `main.py` 열기
-2. **F5** 또는 **실행 버튼** 클릭
-3. `output/` 폴더에 이미지 저장됨
-
-### 터미널에서 실행
-
+#### 테스트 캡처 (2개 공원)
 ```bash
 python main.py
 ```
 
-## 적응형 다방향 샘플링
-
-### 기본 사용법
-
-`main.py`의 `parks` 리스트에 공원 정보 추가:
-
-```python
-parks = [
-    {
-        'name': '매소홀어린이공원',
-        'lat': 37.441929,           # 공원 중심 위도
-        'lng': 126.654533,          # 공원 중심 경도
-        'type': '어린이공원',        # 공원 타입
-        'area': 3006.9,             # 공원 면적 (㎡)
-        'num_directions': 8,        # 8방향 샘플링
-    },
-    {
-        'name': '수봉공원',
-        'lat': 37.460187,
-        'lng': 126.664212,
-        'type': '근린공원',
-        'area': 332694,             # 대형 공원
-        'num_directions': 12,       # 12방향 샘플링
-    },
-]
+#### 전체 공원 일괄 캡처 (64개 공원)
+```bash
+python batch_capture_all_parks.py
 ```
 
-### 적응형 캡처 시스템
+**출력 결과**:
+- `output/[공원명]/[방향].jpg`
+- 예: `output/한나루어린이공원/북.jpg`
 
-시스템이 자동으로 다음을 처리합니다:
+### 4. VLM 기반 공원 평가
 
-1. **면적 기반 반경 계산**
-   - 공원 면적을 원형으로 가정하여 최적 반경 자동 계산
-   - 계산식: `반경 = sqrt(면적/π) × 0.6`
-   - 타입별 최소/최대 제한 적용
+로드뷰 이미지를 Gemini API로 평가합니다.
 
-2. **적응형 범위 확대**
-   - 초기 시도: 계산된 기본 반경
-   - 성공률 < 60%: 반경을 0.4배씩 증가
-   - 최대 2.5배까지 자동 확대
-   - 이미 캡처된 방향은 스킵
-
-3. **로딩 최적화**
-   - JavaScript 로딩 후 2초 추가 대기
-   - 스크린샷 촬영 전 1초 추가 대기
-   - 뿌연 이미지 문제 해결
-
-### 타입별 반경 제한
-
-| 공원 타입 | 최소 반경 | 최대 반경 |
-|----------|----------|----------|
-| 어린이공원 | 15m | 40m |
-| 소공원 | 20m | 50m |
-| 근린공원 | 30m | 80m |
-| 도시공원 | 50m | 150m |
-
-### 샘플링 방향 개수
-
-- **4방향**: 북, 동, 남, 서
-- **8방향**: 북, 북동, 동, 남동, 남, 남서, 서, 북서
-- **12방향**: 30도 간격 세밀 샘플링
-- **16방향**: 22.5도 간격 초정밀 샘플링
-
-### 결과 예시
-
-```
-output/
-  매소홀어린이공원/
-    ├── 북.jpg
-    ├── 북동.jpg
-    ├── 동.jpg
-    ├── 남동.jpg
-    ├── 남.jpg
-    ├── 남서.jpg
-    ├── 서.jpg
-    └── 북서.jpg
-  수봉공원/
-    ├── 북.jpg
-    ├── 남.jpg
-    ├── 동.jpg
-    └── ...
+```bash
+python evaluate_parks.py
 ```
 
-## 프로젝트 구조
+**평가 항목** (각 0-10점):
+- 공원 가시성 (Visibility)
+- 접근성 (Accessibility)
+- 시각적 쾌적성 (Visual Amenity)
+- 녹지 비율 (Green Coverage)
 
-```
-proper_park-inha/
-├── .env                                # API 키 (Git에 커밋 금지)
-├── requirements.txt                    # Python 의존성
-├── main.py                             # 메인 실행 파일 (적응형 샘플링)
-├── batch_capture_all_parks.py          # 전체 공원 일괄 캡처
-├── 인천광역시_미추홀구_도시공원정보_20250105.csv  # 공원 데이터
-├── src/
-│   ├── __init__.py
-│   ├── roadview_client.py              # 로드뷰 클라이언트
-│   ├── park_sampler.py                 # 공원 샘플링 전략
-│   ├── adaptive_capture.py             # 적응형 캡처 관리자
-│   ├── roadview_template.html          # 기본 HTML 템플릿
-│   └── roadview_template_multidir.html # 다방향 샘플링 템플릿
-├── claudedocs/
-│   └── park_polygon_research_2025.md   # 공원 폴리곤 리서치 결과
-└── output/                             # 캡처된 이미지 저장
-    ├── 매소홀어린이공원/
-    │   ├── 북.jpg
-    │   ├── 북동.jpg
-    │   └── ...
-    └── 수봉공원/
-        └── ...
-```
+**출력 결과**:
+- `output/[공원명]/evaluation.json`
+- 방향별 평가 점수 및 종합 평가
 
-## API 사용 방법
+---
 
-### 기본 사용법
+## 🎯 주요 기능
 
-```python
-from src import RoadviewClient
+### ⭐ 적응형 다방향 샘플링
+- **공원 크기별 자동 방향 결정**
+  - 소형 공원 (< 2,000㎡): 4방향
+  - 중형 공원 (2,000-5,000㎡): 6-8방향
+  - 대형 공원 (> 5,000㎡): 12방향
 
-# 클라이언트 생성
-client = RoadviewClient()
+### 🔥 면적 기반 반경 자동 계산
+- 공원 면적을 원형으로 가정하여 최적 샘플링 반경 계산
+- 타입별 최소/최대 제한 적용
+- 공원 경계 근처에서 로드뷰 캡처
 
-# 로드뷰 메타데이터 조회
-metadata = client.get_roadview_metadata(lat=37.5665, lng=126.9779)
-print(metadata)
+### 🚀 적응형 범위 확대
+- 초기 성공률 < 60%: 반경 자동 증가 (0.4배씩)
+- 최대 2.5배까지 확대
+- 이미 캡처된 방향은 스킵
 
-# 로드뷰 이미지 캡처 (단일 위치)
-success = client.capture_roadview(
-    lat=37.5665,
-    lng=126.9779,
-    output_path="output/example.jpg",
-    width=1200,
-    height=800
-)
-```
+### 💡 로딩 최적화
+- JavaScript 완전 로딩 후 2초 대기
+- 스크린샷 촬영 전 1초 추가 대기
+- 뿌연 이미지 문제 해결
 
-### 다방향 샘플링 사용법
+---
 
-```python
-from src import RoadviewClient
-from src.park_sampler import ParkSampler
+## 📊 연구 진행 현황
 
-# 클라이언트와 샘플러 생성
-client = RoadviewClient()
-sampler = ParkSampler()
+| 단계 | 내용 | 상태 |
+|------|------|------|
+| 2.1 | 데이터 수집 (로드뷰 이미지) | ✅ 완료 |
+| 2.2 | 선행연구 검토 | ✅ 완료 |
+| 2.3 | VLM 기반 공원 평가 시스템 구축 | ✅ 완료 |
+| 2.4 | 전체 공원 평가 실행 | 🔄 진행중 |
+| 2.5 | GIS 접근성 분석 | ⏳ 예정 |
 
-# 8방향 샘플링 포인트 생성
-points = sampler.generate_circular_points(
-    park_name='매소홀어린이공원',
-    center_lat=37.441929,
-    center_lng=126.654533,
-    park_type='어린이공원',
-    num_directions=8
-)
+---
 
-# 각 방향에서 로드뷰 캡처
-for point in points:
-    client.capture_roadview_multidir(
-        sample_lat=point['sample_lat'],   # 로드뷰 찾을 위치
-        sample_lng=point['sample_lng'],
-        target_lat=point['target_lat'],   # 카메라가 볼 방향
-        target_lng=point['target_lng'],
-        output_path=f"output/{point['park_name']}_{point['direction']}.jpg"
-    )
-```
+## 🛠️ 기술 스택
 
-### 적응형 샘플링 사용법
+### 데이터 수집
+- **Python 3.x**: 프로젝트 언어
+- **Playwright**: 브라우저 자동화
+- **Kakao Map API**: 로드뷰 이미지
+- **Adaptive Sampling**: 면적 기반 최적화
 
-```python
-# 공원 면적에 따라 자동으로 전략 결정
-points = sampler.generate_adaptive_points(
-    park_name='자동공원',
-    center_lat=37.xxx,
-    center_lng=126.xxx,
-    estimated_area_sqm=5000  # 5000㎡
-)
-# 면적에 따라 자동으로 4/8방향, 단일/이중 링 결정
-```
+### VLM 평가
+- **Google Gemini 2.5 Flash**: 최신 Vision-Language Model (2025)
+- **google-genai SDK**: 통합 Gemini Python SDK (v0.6+)
+- **Pillow**: 이미지 처리
+- **JSON**: 구조화된 평가 결과 저장
 
-## 주의사항
+### 분석 (예정)
+- **QGIS**: GIS 기반 접근성 분석
+- **Pandas**: 데이터 분석 및 통계
 
-### 로드뷰가 없는 경우
+---
 
-일부 위치에는 로드뷰가 없을 수 있습니다. 이 경우:
-- 에러 메시지가 표시된 화면이 캡처됩니다
-- 가까운 도로 위치로 좌표를 조정해보세요
+## 📝 개발 규칙
 
-### API 키 보안
+본 프로젝트는 엄격한 개발 원칙을 따릅니다. 자세한 내용은 [.claude/CLAUDE.md](.claude/CLAUDE.md) 참조.
 
-- `.env` 파일을 **절대 Git에 커밋하지 마세요**
-- `.gitignore`에 `.env`가 포함되어 있는지 확인하세요
+**핵심 원칙**:
+- ✅ 지시받은 기능만 정확히 구현
+- ✅ 철저한 문서화 및 주석
+- ✅ 실제 동작하는 완전한 코드만 작성
+- ✅ 최신 기술은 리서치 먼저
+- ❌ 모킹 데이터, TODO 주석 금지
+- ❌ 요청하지 않은 기능 추가 금지
 
-## 문제 해결
+---
+
+## 🔧 문제 해결
 
 ### "KAKAO_API_KEY가 설정되지 않았습니다"
+→ `.env` 파일에 카카오 API 키를 정확히 입력했는지 확인
 
-→ `.env` 파일에 API 키를 정확히 입력했는지 확인
+### "GEMINI_API_KEY가 설정되지 않았습니다"
+→ `.env` 파일에 Gemini API 키를 정확히 입력했는지 확인
+→ [Google AI Studio](https://aistudio.google.com/app/apikey)에서 키 발급
 
 ### "HTML 템플릿을 찾을 수 없습니다"
+→ `src/templates/` 폴더에 HTML 파일이 있는지 확인
 
-→ `src/roadview_template.html` 파일이 있는지 확인
+### "평가 프롬프트를 찾을 수 없습니다"
+→ `docs/prompts/park_evaluation_prompt.md` 파일이 있는지 확인
 
 ### Playwright 오류
-
 → `playwright install chromium` 실행
 
-### 로드뷰가 표시되지 않음
+### Gemini API 할당량 초과
+→ Google AI Studio에서 API 사용량 확인
+→ 유료 요금제 전환 또는 다음 날 재시도
 
+### 로드뷰가 표시되지 않음
 → 카카오 개발자 사이트에서 Web 플랫폼 도메인이 제대로 등록되었는지 확인
 
-## 라이선스
+---
+
+## 📄 라이선스
 
 MIT License
+
+---
+
+## 👤 연구자
+
+- **소속**: 인하대학교 도시계획론
+- **연구 기간**: 2025년 2학기
+- **연구 지역**: 인천광역시 미추홀구
+
+---
+
+## 📧 문의
+
+프로젝트 관련 문의사항은 이슈를 등록해주세요.

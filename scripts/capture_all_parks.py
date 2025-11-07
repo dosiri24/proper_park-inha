@@ -122,7 +122,7 @@ def main():
     print()
 
     # CSV 파일 경로
-    csv_path = "인천광역시_미추홀구_도시공원정보_20250105.csv"
+    csv_path = "data/인천광역시_미추홀구_도시공원정보_20250105.csv"
 
     if not os.path.exists(csv_path):
         print(f"❌ CSV 파일을 찾을 수 없습니다: {csv_path}")
@@ -176,7 +176,7 @@ def main():
         print(f"📍 위치: ({park['lat']}, {park['lng']})")
 
         # 출력 폴더 생성
-        park_folder = f"output/{park['name']}"
+        park_folder = f"output/roadview_images/{park['name']}"
         os.makedirs(park_folder, exist_ok=True)
 
         # 적응형 캡처 실행

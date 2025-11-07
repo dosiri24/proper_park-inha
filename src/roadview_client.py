@@ -33,8 +33,8 @@ class RoadviewClient:
                 )
 
         self.api_key = api_key
-        self.template_path = Path(__file__).parent / 'roadview_template.html'
-        self.template_multidir_path = Path(__file__).parent / 'roadview_template_multidir.html'
+        self.template_path = Path(__file__).parent / 'templates' / 'roadview_template.html'
+        self.template_multidir_path = Path(__file__).parent / 'templates' / 'roadview_template_multidir.html'
 
         if not self.template_path.exists():
             raise FileNotFoundError(f"HTML 템플릿을 찾을 수 없습니다: {self.template_path}")

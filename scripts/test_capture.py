@@ -75,7 +75,7 @@ def main():
         print()
 
         # 출력 폴더 생성
-        park_folder = f"output/{park['name']}"
+        park_folder = f"output/roadview_images/{park['name']}"
         os.makedirs(park_folder, exist_ok=True)
 
         # 적응형 캡처 실행
