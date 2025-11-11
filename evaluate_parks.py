@@ -28,8 +28,13 @@ def main():
     print("=" * 80)
     print()
 
-    # 환경변수 로드
-    load_dotenv()
+    # 환경변수 로드 (프로젝트 루트의 .env 파일 명시적으로 지정, 기존 환경변수 덮어쓰기)
+    env_path = Path(__file__).parent / '.env'
+    load_dotenv(dotenv_path=env_path, override=True)
+    print(f"📂 환경변수 로드: {env_path}")
+    api_key = os.getenv('GEMINI_API_KEY')
+    print(f"🔑 API Key 확인: {'설정됨' if api_key else '설정 안됨'} (길이: {len(api_key) if api_key else 0})")
+    print()
 
     # 로깅 설정
     setup_logging()
@@ -51,15 +56,16 @@ def main():
         print("먼저 main.py 또는 batch_capture_all_parks.py를 실행하여 이미지를 캡처하세요.")
         sys.exit(1)
 
-    # 공원 폴더 목록 (output/ 또는 output/roadview_images/)
-    park_folders = [f for f in output_dir.iterdir() if f.is_dir() and f.name != 'roadview_images']
+    # 공원 폴더 목록 (output/roadview_images/의 하위 폴더만)
+    roadview_dir = output_dir / 'roadview_images'
 
-    # output/ 직접 하위에 공원 폴더가 없으면 roadview_images/ 확인
-    if not park_folders:
-        roadview_dir = output_dir / 'roadview_images'
-        if roadview_dir.exists():
-            print(f"📂 roadview_images 폴더에서 공원 검색 중...")
-            park_folders = [f for f in roadview_dir.iterdir() if f.is_dir()]
+    if not roadview_dir.exists():
+        print(f"\n❌ 오류: {roadview_dir} 폴더를 찾을 수 없습니다.")
+        print("먼저 로드뷰 이미지를 캡처하세요.")
+        sys.exit(1)
+
+    # roadview_images 폴더의 하위 디렉토리만 공원으로 인식
+    park_folders = [f for f in roadview_dir.iterdir() if f.is_dir()]
 
     if not park_folders:
         print(f"\n❌ 오류: {output_dir} 폴더에 공원 이미지가 없습니다.")
@@ -67,6 +73,11 @@ def main():
         sys.exit(1)
 
     print(f"📂 찾은 공원: {len(park_folders)}개\n")
+
+    # 평가 결과 저장 폴더 생성
+    evaluate_dir = output_dir / 'roadview_evaluate'
+    evaluate_dir.mkdir(exist_ok=True)
+    print(f"📂 평가 결과 저장 폴더: {evaluate_dir}\n")
 
     # 각 공원 평가
     total_parks = len(park_folders)
@@ -86,8 +97,8 @@ def main():
                 park_name=park_name
             )
 
-            # 결과 저장
-            output_path = park_folder / 'evaluation.json'
+            # 결과 저장 (output/roadview_evaluate/공원명.json)
+            output_path = evaluate_dir / f'{park_name}.json'
             evaluator.save_evaluation_results(
                 results=results,
                 output_path=str(output_path)
@@ -124,7 +135,10 @@ def main():
         for park_name in failed_parks:
             print(f"  - {park_name}")
 
-    print(f"\n📊 평가 결과는 각 공원 폴더의 evaluation.json 파일에 저장되었습니다.")
+    print(f"\n📊 평가 결과 저장 위치:")
+    print(f"   {evaluate_dir}/")
+    print(f"   - 총 {success_count}개의 JSON 파일 생성")
+    print(f"   - 파일 형식: 공원명.json")
     print("=" * 80)
 
 

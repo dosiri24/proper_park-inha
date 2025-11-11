@@ -14,6 +14,11 @@ from typing import Dict, Optional
 from google import genai
 from google.genai import types, errors
 from PIL import Image
+from dotenv import load_dotenv
+
+# 프로젝트 루트의 .env 파일 명시적으로 로드 (기존 환경변수 덮어쓰기)
+_env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=_env_path, override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,9 @@ class GeminiEvaluator:
                     ".env 파일에 GEMINI_API_KEY를 설정하거나\n"
                     "GeminiEvaluator(api_key='your_key')로 전달하세요."
                 )
+            # 공백 제거
+            api_key = api_key.strip()
+            logger.info(f"API 키 로드 완료 (길이: {len(api_key)}자)")
 
         # 모델명 설정 (2025년 최신 모델 사용)
         if not model_name:
@@ -124,6 +132,55 @@ class GeminiEvaluator:
 
             for attempt in range(self.max_retries):
                 try:
+                    # JSON Schema 정의
+                    response_schema = {
+                        "type": "object",
+                        "properties": {
+                            "facility_maintenance": {
+                                "type": "object",
+                                "properties": {
+                                    "level": {"type": "string", "enum": ["low", "medium", "high", "not_visible"]},
+                                    "reason": {"type": "string"}
+                                },
+                                "required": ["level", "reason"]
+                            },
+                            "rest_facilities": {
+                                "type": "object",
+                                "properties": {
+                                    "level": {"type": "string", "enum": ["low", "medium", "high", "not_visible"]},
+                                    "reason": {"type": "string"}
+                                },
+                                "required": ["level", "reason"]
+                            },
+                            "greenery_diversity": {
+                                "type": "object",
+                                "properties": {
+                                    "level": {"type": "string", "enum": ["low", "medium", "high", "not_visible"]},
+                                    "reason": {"type": "string"}
+                                },
+                                "required": ["level", "reason"]
+                            },
+                            "openness": {
+                                "type": "object",
+                                "properties": {
+                                    "level": {"type": "string", "enum": ["low", "medium", "high", "not_visible"]},
+                                    "reason": {"type": "string"}
+                                },
+                                "required": ["level", "reason"]
+                            },
+                            "aesthetics": {
+                                "type": "object",
+                                "properties": {
+                                    "level": {"type": "string", "enum": ["low", "medium", "high", "not_visible"]},
+                                    "reason": {"type": "string"}
+                                },
+                                "required": ["level", "reason"]
+                            },
+                            "summary": {"type": "string"}
+                        },
+                        "required": ["facility_maintenance", "rest_facilities", "greenery_diversity", "openness", "aesthetics", "summary"]
+                    }
+
                     # 멀티모달 요청 생성
                     response = self.client.models.generate_content(
                         model=self.model_name,
@@ -134,15 +191,28 @@ class GeminiEvaluator:
                             top_k=40,
                             max_output_tokens=2048,
                             response_mime_type="application/json",  # JSON 출력 강제
+                            response_schema=response_schema,  # JSON Schema 강제
                         )
                     )
 
                     # 응답 검증
                     if response is None or not hasattr(response, 'text') or response.text is None:
-                        raise ValueError("API 응답이 비어있습니다")
+                        # Safety 차단 확인
+                        if hasattr(response, 'prompt_feedback'):
+                            logger.warning(f"프롬프트 피드백: {response.prompt_feedback}")
+                        if hasattr(response, 'candidates'):
+                            logger.warning(f"후보 응답: {response.candidates}")
+                        raise ValueError("API 응답이 비어있습니다 (Safety 필터 또는 기타 차단 가능)")
 
                     # 응답 텍스트 추출
                     response_text = response.text.strip()
+
+                    # 빈 응답 체크
+                    if not response_text:
+                        raise ValueError("응답 텍스트가 비어있습니다")
+
+                    # 디버그: 응답 앞부분 로깅
+                    logger.debug(f"응답 앞 200자: {response_text[:200]}")
 
                     # JSON 파싱 시도 (코드 블록 제거)
                     if '```json' in response_text:
@@ -160,6 +230,10 @@ class GeminiEvaluator:
                 except (errors.ServerError, errors.APIError, json.JSONDecodeError, ValueError) as e:
                     last_error = e
                     error_message = str(e)
+
+                    # JSON 파싱 에러 시 실제 응답 로깅
+                    if isinstance(e, json.JSONDecodeError) and response_text:
+                        logger.error(f"JSON 파싱 실패. 응답 내용:\n{response_text[:500]}")
 
                     # 재시도 가능한 에러 판단
                     is_retryable = (
@@ -184,6 +258,13 @@ class GeminiEvaluator:
                     else:
                         # 재시도 불가능하거나 마지막 시도인 경우 에러 발생
                         logger.error(f"최종 재시도 실패: {error_message}")
+                        # JSON 파싱 실패 시 응답 저장
+                        if isinstance(e, json.JSONDecodeError) and response_text:
+                            error_file = Path(__file__).parent.parent / 'output' / 'error_responses' / f'{park_name}_{direction}_error.txt'
+                            error_file.parent.mkdir(parents=True, exist_ok=True)
+                            with open(error_file, 'w', encoding='utf-8') as f:
+                                f.write(response_text)
+                            logger.error(f"에러 응답 저장: {error_file}")
                         raise
 
             # 모든 재시도 실패 시 (이 코드에 도달하면 안 됨)
